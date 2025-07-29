@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -7,61 +7,152 @@
     body {
       font-family: sans-serif;
       text-align: center;
-      padding: 50px;
-      background: #f9f9f9;
+      padding: 20px;
     }
-    #word {
-      font-size: 2em;
+    input, button {
+      padding: 8px;
+      margin: 5px;
+    }
+    #typing-area {
+      font-size: 24px;
       margin: 20px;
     }
-    #input {
-      font-size: 1.5em;
-      padding: 10px;
-      width: 300px;
+    #score-table {
+      margin-top: 30px;
+      text-align: left;
     }
-    #result {
-      margin-top: 20px;
-      font-size: 1.2em;
-      color: green;
+    table {
+      margin: 0 auto;
+      border-collapse: collapse;
+    }
+    td, th {
+      border: 1px solid #ccc;
+      padding: 6px 12px;
     }
   </style>
 </head>
 <body>
-  <h1>タイピング練習</h1>
-  <div id="word">読み込み中...</div>
-  <input type="text" id="input" placeholder="ここに入力" autofocus />
-  <div id="result"></div>
+  <h1>タイピングゲーム</h1>
+  <div id="user-setup">
+    <p>ユーザー名を入力してください:</p>
+    <input type="text" id="username" />
+    <button onclick="startGame()">開始</button>
+  </div>
+
+  <div id="game" style="display:none;">
+    <div id="typing-area"></div>
+    <input type="text" id="user-input" autocomplete="off" />
+    <!-- もし使うならtextareaをここに入れてください -->
+    <!-- <textarea id="typeInp"></textarea> -->
+    <p id="timer">タイム: 0.00 秒</p>
+  </div>
+
+  <div id="score-table">
+    <h2>スコア記録</h2>
+    <table>
+      <thead>
+        <tr><th>順位</th><th>ユーザー名</th><th>タイム（秒）</th></tr>
+      </thead>
+      <tbody id="scores"></tbody>
+    </table>
+  </div>
 
   <script>
-    const words = ["こんにちは", "さようなら", "ありがとう", "タイピング", "プログラミング", "チャット", "未来", "空", "世界", "猫"];
-    let currentWord = "";
+    const words = [
+      "まつざかぎゅう", "なるなるなるね", "きぬがっさ", "じっつー",
+      "ゆうしん", "マジック", "ご主人様", "かつみんち",
+      "はっぴいぺんしょん", "さわやか", "ぶんぶんドライブ",
+      "しんじつ", "ゆいこちゃん", "ちーぷがし"
+    ];
+
+    let currentWordIndex = 0;
     let startTime;
+    let timerInterval;
+    let username;
 
-    const wordEl = document.getElementById("word");
-    const inputEl = document.getElementById("input");
-    const resultEl = document.getElementById("result");
+    const inputBox = document.getElementById("user-input");
 
-    function setNewWord() {
-      currentWord = words[Math.floor(Math.random() * words.length)];
-      wordEl.textContent = currentWord;
-      inputEl.value = "";
-      startTime = new Date();
+    function startGame() {
+      username = document.getElementById("username").value.trim();
+      if (!username) {
+        alert("ユーザー名を入力してください！");
+        return;
+      }
+
+      document.getElementById("user-setup").style.display = "none";
+      document.getElementById("game").style.display = "block";
+
+      currentWordIndex = 0;
+      document.getElementById("typing-area").textContent = words[currentWordIndex];
+      inputBox.value = "";
+      inputBox.focus();
+
+      inputBox.addEventListener("input", checkInput);
+
+      startTime = performance.now();
+      timerInterval = setInterval(updateTimer, 10);
     }
 
-    inputEl.addEventListener("input", () => {
-      if (inputEl.value === currentWord) {
-        const timeTaken = (new Date() - startTime) / 1000;
-        resultEl.textContent = `成功！${timeTaken.toFixed(2)}秒かかりました。`;
-        setTimeout(() => {
-          resultEl.textContent = "";
-          setNewWord();
-        }, 1500);
-      }
-    });
+    function updateTimer() {
+      const now = performance.now();
+      const elapsed = (now - startTime) / 1000;
+      document.getElementById("timer").textContent = `タイム: ${elapsed.toFixed(2)} 秒`;
+    }
 
-    window.onload = () => {
-      setNewWord();
-    };
+    // 新しい checkInput 関数（user-input と typeInp をクリア）
+    function checkInput() {
+      const input = inputBox.value;
+      const target = words[currentWordIndex];
+      if (input === target) {
+        currentWordIndex++;
+
+        // user-input クリア
+        inputBox.value = "";
+
+        // typeInp クリア（あれば）
+        const typeInput = document.getElementById("typeInp");
+        if (typeInput) {
+          typeInput.value = "";
+        }
+
+        if (currentWordIndex < words.length) {
+          document.getElementById("typing-area").textContent = words[currentWordIndex];
+          inputBox.focus();
+        } else {
+          endGame();
+        }
+      }
+    }
+
+    function endGame() {
+      clearInterval(timerInterval);
+      const finalTime = ((performance.now() - startTime) / 1000).toFixed(2);
+      saveScore(username, finalTime);
+      alert(`${username}さんのタイムは ${finalTime} 秒でした！`);
+      showScores();
+      location.reload();
+    }
+
+    function saveScore(name, time) {
+      const scores = JSON.parse(localStorage.getItem("typingScores") || "[]");
+      scores.push({ name, time });
+      scores.sort((a, b) => parseFloat(a.time) - parseFloat(b.time));
+      localStorage.setItem("typingScores", JSON.stringify(scores));
+    }
+
+    function showScores() {
+      const scores = JSON.parse(localStorage.getItem("typingScores") || "[]");
+      const tbody = document.getElementById("scores");
+      tbody.innerHTML = "";
+
+      scores.slice(0, 3).forEach((score, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${index + 1}位</td><td>${score.name}</td><td>${score.time}</td>`;
+        tbody.appendChild(row);
+      });
+    }
+
+    showScores(); // 初期表示
   </script>
 </body>
 </html>
