@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>タイピング練習</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 50px;
+      background: #f9f9f9;
+    }
+    #word {
+      font-size: 2em;
+      margin: 20px;
+    }
+    #input {
+      font-size: 1.5em;
+      padding: 10px;
+      width: 300px;
+    }
+    #result {
+      margin-top: 20px;
+      font-size: 1.2em;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>タイピング練習</h1>
+  <div id="word">読み込み中...</div>
+  <input type="text" id="input" placeholder="ここに入力" autofocus />
+  <div id="result"></div>
+
+  <script>
+    const words = ["こんにちは", "さようなら", "ありがとう", "タイピング", "プログラミング", "チャット", "未来", "空", "世界", "猫"];
+    let currentWord = "";
+    let startTime;
+
+    const wordEl = document.getElementById("word");
+    const inputEl = document.getElementById("input");
+    const resultEl = document.getElementById("result");
+
+    function setNewWord() {
+      currentWord = words[Math.floor(Math.random() * words.length)];
+      wordEl.textContent = currentWord;
+      inputEl.value = "";
+      startTime = new Date();
+    }
+
+    inputEl.addEventListener("input", () => {
+      if (inputEl.value === currentWord) {
+        const timeTaken = (new Date() - startTime) / 1000;
+        resultEl.textContent = `成功！${timeTaken.toFixed(2)}秒かかりました。`;
+        setTimeout(() => {
+          resultEl.textContent = "";
+          setNewWord();
+        }, 1500);
+      }
+    });
+
+    window.onload = () => {
+      setNewWord();
+    };
+  </script>
+</body>
+</html>
