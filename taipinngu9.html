@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>タイピング練習</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    input, button {
+      padding: 8px;
+      margin: 5px;
+    }
+    #typing-area {
+      font-size: 24px;
+      margin: 20px;
+    }
+    #score-table {
+      margin-top: 30px;
+      text-align: left;
+    }
+    table {
+      margin: 0 auto;
+      border-collapse: collapse;
+    }
+    td, th {
+      border: 1px solid #ccc;
+      padding: 6px 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>タイピングゲーム</h1>
+  <div id="user-setup">
+    <p>ユーザー名を入力してください:</p>
+    <input type="text" id="username" />
+    <button onclick="startGame()">開始</button>
+  </div>
+
+  <div id="game" style="display:none;">
+    <div id="typing-area"></div>
+    <input type="text" id="user-input" autocomplete="off" />
+    <!-- もし使うならtextareaをここに入れてください -->
+    <!-- <textarea id="typeInp"></textarea> -->
+    <p id="timer">タイム: 0.00 秒</p>
+  </div>
+
+  <div id="score-table">
+    <h2>スコア記録</h2>
+    <table>
+      <thead>
+        <tr><th>順位</th><th>ユーザー名</th><th>タイム（秒）</th></tr>
+      </thead>
+      <tbody id="scores"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const words = [
+      "まつざかぎゅう", "なるなるなるね", "きぬがっさ", "じっつー",
+      "ゆうしん", "マジック", "ご主人様", "かつみんち",
+      "はっぴいぺんしょん", "さわやか", "ぶんぶんドライブ",
+      "しんじつ", "ゆいこちゃん", "ちーぷがし"
+    ];
+
+    let currentWordIndex = 0;
+    let startTime;
+    let timerInterval;
+    let username;
+
+    const inputBox = document.getElementById("user-input");
+
+    function startGame() {
+      username = document.getElementById("username").value.trim();
+      if (!username) {
+        alert("ユーザー名を入力してください！");
+        return;
+      }
+
+      document.getElementById("user-setup").style.display = "none";
+      document.getElementById("game").style.display = "block";
+
+      currentWordIndex = 0;
+      document.getElementById("typing-area").textContent = words[currentWordIndex];
+      inputBox.value = "";
+      inputBox.focus();
+
+      inputBox.addEventListener("input", checkInput);
+
+      startTime = performance.now();
+      timerInterval = setInterval(updateTimer, 10);
+    }
+
+    function updateTimer() {
+      const now = performance.now();
+      const elapsed = (now - startTime) / 1000;
+      document.getElementById("timer").textContent = `タイム: ${elapsed.toFixed(2)} 秒`;
+    }
+
+    // 新しい checkInput 関数（user-input と typeInp をクリア）
+    function checkInput() {
+      const input = inputBox.value;
+      const target = words[currentWordIndex];
+      if (input === target) {
+        currentWordIndex++;
+
+        // user-input クリア
+        inputBox.value = "";
+
+        // typeInp クリア（あれば）
+        const typeInput = document.getElementById("typeInp");
+        if (typeInput) {
+          typeInput.value = "";
+        }
+
+        if (currentWordIndex < words.length) {
+          document.getElementById("typing-area").textContent = words[currentWordIndex];
+          inputBox.focus();
+        } else {
+          endGame();
+        }
+      }
+    }
+
+    function endGame() {
+      clearInterval(timerInterval);
+      const finalTime = ((performance.now() - startTime) / 1000).toFixed(2);
+      saveScore(username, finalTime);
+      alert(`${username}さんのタイムは ${finalTime} 秒でした！`);
+      showScores();
+      location.reload();
+    }
+
+    function saveScore(name, time) {
+      const scores = JSON.parse(localStorage.getItem("typingScores") || "[]");
+      scores.push({ name, time });
+      scores.sort((a, b) => parseFloat(a.time) - parseFloat(b.time));
+      localStorage.setItem("typingScores", JSON.stringify(scores));
+    }
+
+    function showScores() {
+      const scores = JSON.parse(localStorage.getItem("typingScores") || "[]");
+      const tbody = document.getElementById("scores");
+      tbody.innerHTML = "";
+
+      scores.slice(0, 3).forEach((score, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${index + 1}位</td><td>${score.name}</td><td>${score.time}</td>`;
+        tbody.appendChild(row);
+      });
+    }
+
+    showScores(); // 初期表示
+  </script>
+</body>
+</html>
