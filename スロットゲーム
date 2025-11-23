@@ -1,0 +1,188 @@
+import React, { useState, useEffect, useRef } from 'react';
+
+const SlotMachine = () => {
+  const symbols = ['🍒', '🍋', '🍊', '🍇', '🔔', '7️⃣', '💎'];
+  
+  const [reels, setReels] = useState([symbols[0], symbols[1], symbols[2]]);
+  const [isSpinning, setIsSpinning] = useState([false, false, false]);
+  const intervals = useRef([null, null, null]); // タイマーをrefで管理（再レンダーに影響されない）
+  const [score, setScore] = useState(100);
+  const [message, setMessage] = useState('🎰 全リール回転でスタート！');
+
+  // 全リールを回転
+  const spinAll = () => {
+    if (score < 10) {
+      setMessage('💰 コインが足りません！');
+      return;
+    }
+
+    setScore(prev => prev - 10);
+    setMessage('🔄 リールを個別に止めましょう！');
+
+    // 全リールを初期化して回転開始
+    setReels([symbols[0], symbols[1], symbols[2]]);
+
+    [0, 1, 2].forEach(index => {
+      // 既存のタイマーがあればクリア
+      if (intervals.current[index]) {
+        clearInterval(intervals.current[index]);
+      }
+
+      // 新しいタイマー開始
+      const id = setInterval(() => {
+        setReels(prev => {
+          const newReels = [...prev];
+          newReels[index] = symbols[Math.floor(Math.random() * symbols.length)];
+          return newReels;
+        });
+      }, 80);
+
+      intervals.current[index] = id;
+    });
+
+    setIsSpinning([true, true, true]);
+  };
+
+  // 個別リール停止
+  const stopReel = (index) => {
+    if (!isSpinning[index]) return;
+
+    // タイマー停止
+    if (intervals.current[index]) {
+      clearInterval(intervals.current[index]);
+      intervals.current[index] = null;
+    }
+
+    // 状態更新
+    setIsSpinning(prev => {
+      const newSpinning = [...prev];
+      newSpinning[index] = false;
+      return newSpinning;
+    });
+
+    // 全リール停止チェック → 自動判定
+    const newSpinning = [...isSpinning];
+    newSpinning[index] = false;
+    if (!newSpinning.some(s => s)) {
+      setTimeout(() => {
+        const [a, b, c] = reels;
+        if (a === b && b === c) {
+          const win = 10 * (a === '7️⃣' ? 10 : a === '💎' ? 5 : 3);
+          setScore(prev => prev + win);
+          setMessage(`🎉 ${a} ${b} ${c} — ${win}コイン獲得！`);
+        } else {
+          setMessage('😔 残念！揃いませんでした。');
+        }
+      }, 150);
+    }
+  };
+
+  // リセット
+  const resetGame = () => {
+    // 全タイマー停止
+    intervals.current.forEach(id => {
+      if (id) clearInterval(id);
+    });
+    intervals.current = [null, null, null];
+    setIsSpinning([false, false, false]);
+    setReels([symbols[0], symbols[1], symbols[2]]);
+    setScore(100);
+    setMessage('🎰 全リール回転でスタート！');
+  };
+
+  // クリーンアップ（コンポーネント破棄時）
+  useEffect(() => {
+    return () => {
+      intervals.current.forEach(id => {
+        if (id) clearInterval(id);
+      });
+    };
+  }, []);
+
+  const isAnySpinning = isSpinning.some(s => s);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
+      <div className="bg-gray-900 rounded-3xl shadow-2xl p-6 max-w-md w-full border border-gray-700">
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-yellow-400 mb-2">🎰 スロットマシン</h1>
+          <div className="flex justify-between items-center bg-gray-800 rounded-xl p-3">
+            <div className="text-white font-semibold">
+              コイン: <span className="text-yellow-400">{score}</span>
+            </div>
+            <div className="text-white">ベット: 10</div>
+          </div>
+        </div>
+
+        {/* リール表示（1,2,3で識別） */}
+        <div className="bg-gray-800 rounded-2xl p-6 mb-5 border-4 border-yellow-600">
+          <div className="flex justify-center space-x-5">
+            {reels.map((symbol, index) => (
+              <div key={index} className="flex flex-col items-center">
+                {/* リール番号 */}
+                <div className="mb-1.5 w-8 h-6 flex items-center justify-center bg-gray-700 text-white rounded text-sm font-bold">
+                  {index + 1}
+                </div>
+                
+                {/* シンボル */}
+                <div
+                  className="w-16 h-16 flex items-center justify-center bg-black rounded-xl text-3xl font-bold border-2 transition-all"
+                  style={{
+                    borderColor: isSpinning[index] ? '#fbbf24' : '#4b5563',
+                    boxShadow: isSpinning[index] 
+                      ? '0 0 12px rgba(255, 215, 0, 0.7)' 
+                      : '0 0 6px rgba(100, 100, 255, 0.3)'
+                  }}
+                >
+                  {symbol}
+                </div>
+                
+                {/* STOPボタン */}
+                <button
+                  onClick={() => stopReel(index)}
+                  disabled={!isSpinning[index]}
+                  className="mt-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+                >
+                  STOP
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* メッセージ */}
+        <div className={`text-center py-2 mb-4 rounded font-semibold ${
+          message.includes('🎉') ? 'bg-green-900/80 text-green-300' : 
+          message.includes('💰') ? 'bg-orange-900/80 text-orange-300' :
+          'bg-gray-800 text-gray-300'
+        }`}>
+          {message}
+        </div>
+
+        {/* 全体操作ボタン */}
+        <div className="space-y-3">
+          <button
+            onClick={spinAll}
+            disabled={isAnySpinning}
+            className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-gray-600 disabled:to-gray-700 text-black font-bold py-3 rounded-xl text-lg transition-all disabled:cursor-not-allowed"
+          >
+            {isAnySpinning ? '🔄 回転中...' : '🎰 全リール回転'}
+          </button>
+          
+          <button
+            onClick={resetGame}
+            className="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 rounded-lg transition-colors"
+          >
+            🔄 リセット
+          </button>
+        </div>
+
+        <div className="mt-4 text-center text-gray-400 text-xs">
+          全リール回転 → 各「STOP」で個別停止 → 全停止で自動判定
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SlotMachine;
